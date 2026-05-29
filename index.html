@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070d1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>TABASSUM — Voice Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070d1a;
+  --bg2: #0d1829;
+  --bg3: #111f36;
+  --cyan: #00e5c3;
+  --cyan2: #00b89a;
+  --gold: #ffd166;
+  --red: #ff4d6d;
+  --blue: #4dabf7;
+  --purple: #b197fc;
+  --border: rgba(0,229,195,0.12);
+  --text: #e8f4f8;
+  --muted: #4a7a99;
+  --font: 'Syne', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:var(--font); overflow-x:hidden; }
+
+/* SPLASH SCREEN */
+#splash {
+  position:fixed; inset:0; background:var(--bg); z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition:opacity 0.8s ease;
+}
+#splash.hide { opacity:0; pointer-events:none; }
+.splash-ring {
+  width:120px; height:120px; border-radius:50%;
+  border:2px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  position:relative; margin-bottom:24px;
+  animation:splashPulse 2s infinite;
+}
+.splash-ring::before {
+  content:''; position:absolute; inset:-8px; border-radius:50%;
+  border:1px solid rgba(0,229,195,0.08);
+  animation:splashPulse 2s infinite 0.3s;
+}
+.splash-ring::after {
+  content:''; position:absolute; inset:-18px; border-radius:50%;
+  border:1px solid rgba(0,229,195,0.04);
+  animation:splashPulse 2s infinite 0.6s;
+}
+@keyframes splashPulse {
+  0%,100% { transform:scale(1); border-color:rgba(0,229,195,0.2); }
+  50% { transform:scale(1.05); border-color:rgba(0,229,195,0.4); }
+}
+.splash-mic { font-size:48px; }
+.splash-title { font-size:28px; font-weight:800; letter-spacing:4px; color:var(--cyan); margin-bottom:6px; }
+.splash-sub { font-size:11px; color:var(--muted); letter-spacing:3px; }
+.splash-dots { display:flex; gap:6px; margin-top:32px; }
+.splash-dot { width:6px; height:6px; border-radius:50%; background:var(--border); animation:dotBlink 1.5s infinite; }
+.splash-dot:nth-child(2) { animation-delay:0.2s; }
+.splash-dot:nth-child(3) { animation-delay:0.4s; }
+@keyframes dotBlink { 0%,100% { background:var(--border); } 50% { background:var(--cyan); } }
+
+/* MAIN APP */
+#app { display:none; flex-direction:column; min-height:100vh; }
+#app.visible { display:flex; }
+
+/* TOP BAR */
+.topbar {
+  background:var(--bg2); padding:14px 16px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.topbar-logo { font-size:18px; font-weight:800; letter-spacing:3px; color:var(--cyan); }
+.topbar-sub { font-size:9px; color:var(--muted); letter-spacing:2px; margin-top:1px; }
+.topbar-status { display:flex; align-items:center; gap:6px; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+.status-dot.live { background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:statusBlink 2s infinite; }
+.status-dot.hearing { background:var(--red); box-shadow:0 0 10px var(--red); animation:statusBlink 0.6s infinite; }
+@keyframes statusBlink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.status-label { font-size:10px; color:var(--muted); font-family:var(--mono); }
+
+/* SCROLL CONTENT */
+.scroll-content { flex:1; overflow-y:auto; padding-bottom:80px; }
+
+/* MIC SECTION */
+.mic-section {
+  padding:28px 16px 20px; text-align:center;
+  background:linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+}
+.mic-outer {
+  width:130px; height:130px; border-radius:50%; margin:0 auto 16px;
+  border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  position:relative; cursor:pointer;
+  transition:all 0.3s ease;
+}
+.mic-outer.listening {
+  border-color:rgba(255,77,109,0.5);
+  box-shadow:0 0 0 0 rgba(255,77,109,0.3);
+  animation:micPulse 1.2s infinite;
+}
+.mic-outer.ready { border-color:rgba(0,229,195,0.4); box-shadow:0 0 20px rgba(0,229,195,0.15); }
+@keyframes micPulse {
+  0% { box-shadow:0 0 0 0 rgba(255,77,109,0.4); }
+  70% { box-shadow:0 0 0 24px rgba(255,77,109,0); }
+  100% { box-shadow:0 0 0 0 rgba(255,77,109,0); }
+}
+.mic-inner {
+  width:90px; height:90px; border-radius:50%;
+  background:var(--bg3); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:4px; transition:all 0.3s;
+}
+.mic-outer.listening .mic-inner { background:#1a0a12; border-color:rgba(255,77,109,0.3); }
+.mic-outer.ready .mic-inner { background:#0a1e18; border-color:rgba(0,229,195,0.2); }
+.mic-emoji { font-size:30px; }
+.mic-label { font-size:9px; color:var(--muted); font-family:var(--mono); letter-spacing:1px; }
+.mic-hint { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.mic-hint span { color:var(--cyan); font-weight:600; }
+.wake-word-badge {
+  display:inline-block; background:rgba(0,229,195,0.08);
+  border:1px solid rgba(0,229,195,0.2); border-radius:20px;
+  padding:4px 14px; font-size:11px; color:var(--cyan);
+  letter-spacing:2px; font-family:var(--mono);
+}
+
+/* TRANSCRIPT BOX */
+.transcript-box {
+  margin:0 16px 16px;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:12px 14px; min-height:52px;
+  display:flex; align-items:center; gap:10px;
+}
+.transcript-icon { font-size:16px; flex-shrink:0; }
+.transcript-text { font-size:12px; color:var(--muted); font-family:var(--mono); flex:1; line-height:1.5; }
+.transcript-text.active { color:var(--cyan); }
+.transcript-text.cmd { color:var(--gold); }
+
+/* SECTION HEADER */
+.section-hdr {
+  padding:0 16px 10px; display:flex; align-items:center; gap:10px;
+}
+.section-hdr-line { flex:1; height:1px; background:var(--border); }
+.section-hdr-title { font-size:10px; color:var(--muted); letter-spacing:2px; font-family:var(--mono); white-space:nowrap; }
+
+/* COMMAND CARDS */
+.cmd-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  padding:0 16px 8px;
+}
+.cmd-card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:14px; padding:14px 12px; cursor:pointer;
+  transition:all 0.2s; position:relative; overflow:hidden;
+  display:flex; flex-direction:column; gap:6px;
+  -webkit-tap-highlight-color:transparent;
+}
+.cmd-card::before {
+  content:''; position:absolute; inset:0; opacity:0;
+  background:radial-gradient(circle at 50% 50%, var(--accent-color), transparent 70%);
+  transition:opacity 0.3s;
+}
+.cmd-card:active::before { opacity:0.08; }
+.cmd-card:active { transform:scale(0.97); }
+.cmd-card-icon { font-size:22px; }
+.cmd-card-name { font-size:12px; font-weight:700; color:var(--text); }
+.cmd-card-eg { font-size:10px; color:var(--muted); line-height:1.4; font-family:var(--mono); }
+.cmd-card-badge {
+  position:absolute; top:8px; left:8px;
+  width:6px; height:6px; border-radius:50%;
+  background:var(--accent-color); opacity:0.6;
+}
+
+/* CONTACTS SECTION */
+.contacts-section { padding:0 16px 16px; }
+.contacts-scroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+.contacts-scroll::-webkit-scrollbar { display:none; }
+.contact-chip {
+  flex-shrink:0; background:var(--bg2); border:1px solid var(--border);
+  border-radius:24px; padding:6px 14px;
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+  transition:all 0.2s;
+}
+.contact-chip.active { background:rgba(0,229,195,0.1); border-color:rgba(0,229,195,0.35); }
+.contact-chip-av {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--bg3); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:var(--cyan); flex-shrink:0;
+}
+.contact-chip-name { font-size:11px; color:var(--text); white-space:nowrap; }
+.contact-add-btn {
+  flex-shrink:0; background:transparent; border:1px dashed rgba(0,229,195,0.25);
+  border-radius:24px; padding:6px 12px; cursor:pointer;
+  font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px;
+  transition:all 0.2s;
+}
+.contact-add-btn:active { border-color:var(--cyan); color:var(--cyan); }
+
+/* ADD CONTACT FORM */
+.add-form {
+  display:none; margin:0 16px 16px;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:14px;
+}
+.add-form.show { display:block; }
+.add-form input {
+  width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px; color:var(--text); font-size:13px;
+  font-family:var(--font); outline:none; margin-bottom:8px;
+  direction:rtl;
+}
+.add-form input:focus { border-color:rgba(0,229,195,0.35); }
+.add-form input::placeholder { color:var(--muted); }
+.form-btns { display:flex; gap:8px; }
+.btn-save {
+  flex:1; background:rgba(0,229,195,0.1); border:1px solid rgba(0,229,195,0.3);
+  color:var(--cyan); border-radius:8px; padding:9px; font-size:12px;
+  font-family:var(--font); cursor:pointer; font-weight:600;
+}
+.btn-cancel {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); border-radius:8px; padding:9px 14px; font-size:12px;
+  font-family:var(--font); cursor:pointer;
+}
+
+/* QUICK ACTIONS */
+.quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 16px 16px; }
+.quick-btn {
+  background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:12px 6px; text-align:center; cursor:pointer; transition:all 0.2s;
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+}
+.quick-btn:active { transform:scale(0.96); background:var(--bg3); }
+.quick-btn-icon { font-size:20px; }
+.quick-btn-label { font-size:10px; color:var(--muted); }
+
+/* ACTIVITY LOG */
+.log-section { padding:0 16px 16px; }
+.log-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; overflow:hidden; max-height:180px; overflow-y:auto;
+}
+.log-box::-webkit-scrollbar { width:3px; }
+.log-box::-webkit-scrollbar-track { background:transparent; }
+.log-box::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.log-entry {
+  padding:9px 14px; border-bottom:1px solid rgba(0,229,195,0.05);
+  display:flex; gap:10px; align-items:flex-start;
+}
+.log-entry:last-child { border:none; }
+.log-time { font-size:10px; color:var(--muted); font-family:var(--mono); flex-shrink:0; padding-top:1px; }
+.log-msg { font-size:11px; color:var(--muted); flex:1; line-height:1.5; }
+.log-msg.ok { color:var(--cyan); }
+.log-msg.act { color:var(--gold); }
+.log-msg.err { color:var(--red); }
+.log-empty { padding:16px 14px; font-size:11px; color:var(--muted); text-align:center; }
+
+/* COMMANDS HELP */
+.help-section { padding:0 16px 16px; }
+.help-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px;
+}
+.help-row { display:flex; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,229,195,0.05); align-items:flex-start; }
+.help-row:last-child { border:none; }
+.help-badge {
+  background:rgba(0,229,195,0.08); border:1px solid rgba(0,229,195,0.15);
+  border-radius:6px; padding:2px 8px; font-size:10px; color:var(--cyan);
+  font-family:var(--mono); white-space:nowrap; flex-shrink:0;
+}
+.help-text { font-size:11px; color:var(--muted); line-height:1.5; flex:1; }
+.help-text span { color:var(--gold); }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--bg2); border-top:1px solid var(--border);
+  display:flex; padding:8px 0 20px; z-index:100;
+}
+.nav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:3px; cursor:pointer; padding:6px 0;
+  transition:all 0.2s;
+}
+.nav-item-icon { font-size:20px; }
+.nav-item-label { font-size:9px; color:var(--muted); letter-spacing:0.5px; }
+.nav-item.active .nav-item-label { color:var(--cyan); }
+.nav-item.active .nav-item-icon { filter:drop-shadow(0 0 4px var(--cyan)); }
+
+/* TABS */
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* MODAL */
+.modal-bg {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.85); z-index:200;
+  align-items:flex-end; justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.modal-bg.show { display:flex; }
+.modal-sheet {
+  background:var(--bg2); border-top:1px solid var(--border);
+  border-radius:20px 20px 0 0; padding:20px 20px 40px;
+  width:100%; max-width:480px;
+  animation:sheetUp 0.3s ease;
+}
+@keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-handle { width:36px; height:4px; border-radius:2px; background:var(--border); margin:0 auto 20px; }
+.modal-icon { font-size:44px; text-align:center; margin-bottom:10px; }
+.modal-title { font-size:18px; font-weight:700; color:var(--text); text-align:center; margin-bottom:4px; }
+.modal-sub { font-size:12px; color:var(--muted); text-align:center; margin-bottom:20px; font-family:var(--mono); }
+.modal-actions { display:flex; flex-direction:column; gap:10px; }
+.modal-btn {
+  width:100%; padding:14px; border-radius:12px; font-size:14px;
+  font-family:var(--font); font-weight:600; cursor:pointer; border:1px solid;
+  transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.modal-btn:active { transform:scale(0.98); }
+.mb-green { background:rgba(0,229,195,0.1); border-color:rgba(0,229,195,0.35); color:var(--cyan); }
+.mb-red { background:rgba(255,77,109,0.1); border-color:rgba(255,77,109,0.35); color:var(--red); }
+.mb-gold { background:rgba(255,209,102,0.1); border-color:rgba(255,209,102,0.35); color:var(--gold); }
+.mb-blue { background:rgba(77,171,247,0.1); border-color:rgba(77,171,247,0.35); color:var(--blue); }
+.mb-ghost { background:transparent; border-color:var(--border); color:var(--muted); font-weight:400; }
+
+/* SETTINGS TAB */
+.settings-section { padding:16px 16px 8px; }
+.settings-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:12px; }
+.settings-row {
+  display:flex; align-items:center; gap:12px; padding:14px 16px;
+  border-bottom:1px solid rgba(0,229,195,0.05);
+}
+.settings-row:last-child { border:none; }
+.settings-icon { font-size:18px; flex-shrink:0; }
+.settings-info { flex:1; }
+.settings-label { font-size:13px; color:var(--text); font-weight:600; }
+.settings-desc { font-size:10px; color:var(--muted); margin-top:1px; }
+.toggle-switch {
+  width:44px; height:24px; background:var(--bg); border:1px solid var(--border);
+  border-radius:12px; position:relative; cursor:pointer; flex-shrink:0; transition:all 0.3s;
+}
+.toggle-switch.on { background:rgba(0,229,195,0.2); border-color:rgba(0,229,195,0.4); }
+.toggle-knob {
+  width:18px; height:18px; background:var(--muted); border-radius:50%;
+  position:absolute; top:2px; left:2px; transition:all 0.3s;
+}
+.toggle-switch.on .toggle-knob { left:22px; background:var(--cyan); }
+
+.wake-word-input {
+  margin:0 16px 16px; background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:14px;
+}
+.ww-label { font-size:11px; color:var(--muted); margin-bottom:8px; font-family:var(--mono); letter-spacing:1px; }
+.ww-field {
+  width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px; color:var(--cyan); font-size:14px;
+  font-family:var(--font); font-weight:700; outline:none; letter-spacing:2px;
+  direction:ltr; text-align:center;
+}
+.ww-field:focus { border-color:rgba(0,229,195,0.35); }
+
+/* ABOUT */
+.about-card {
+  margin:16px; background:var(--bg2); border:1px solid var(--border);
+  border-radius:14px; padding:20px; text-align:center;
+}
+.about-logo { font-size:36px; font-weight:800; letter-spacing:4px; color:var(--cyan); margin-bottom:4px; }
+.about-version { font-size:10px; color:var(--muted); font-family:var(--mono); letter-spacing:2px; margin-bottom:16px; }
+.about-desc { font-size:12px; color:var(--muted); line-height:1.8; }
+.about-desc span { color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-ring">
+    <div class="splash-mic">🎙️</div>
+  </div>
+  <div class="splash-title">TABASSUM</div>
+  <div class="splash-sub">VOICE ASSISTANT</div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-logo">🎙 TABASSUM</div>
+      <div class="topbar-sub">VOICE ASSISTANT</div>
+    </div>
+    <div class="topbar-status">
+      <div class="status-dot" id="topDot"></div>
+      <div class="status-label" id="topLabel">بند</div>
+    </div>
+  </div>
+
+  <div class="scroll-content">
+
+    <!-- TAB: HOME -->
+    <div class="tab-content active" id="tab-home">
+
+      <!-- MIC -->
+      <div class="mic-section">
+        <div class="mic-outer" id="micBtn" onclick="toggleMic()">
+          <div class="mic-inner">
+            <div class="mic-emoji" id="micEmoji">🎙️</div>
+            <div class="mic-label" id="micLabel">START</div>
+          </div>
+        </div>
+        <div class="mic-hint">آواز سے کنٹرول کریں:</div>
+        <div class="wake-word-badge" id="wakeWordDisplay">تبسم</div>
+      </div>
+
+      <!-- TRANSCRIPT -->
+      <div class="transcript-box">
+        <div class="transcript-icon">📝</div>
+        <div class="transcript-text" id="transcriptText">مائیکروفون دبائیں اور "تبسم" کہیں...</div>
+      </div>
+
+      <!-- COMMANDS -->
+      <div class="section-hdr">
+        <div class="section-hdr-title">آواز کے احکام</div>
+        <div class="section-hdr-line"></div>
+      </div>
+      <div class="cmd-grid">
+        <div class="cmd-card" style="--accent-color:#4dabf7" onclick="showModal('call')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">📞</div>
+          <div class="cmd-card-name">فون کرو</div>
+          <div class="cmd-card-eg">"تبسم [نام] کو فون کرو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#ff4d6d" onclick="showModal('reject')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">📵</div>
+          <div class="cmd-card-name">کال ریجیکٹ</div>
+          <div class="cmd-card-eg">"تبسم کال ریجیکٹ کرو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#ffd166" onclick="showModal('mute')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">🔇</div>
+          <div class="cmd-card-name">میوٹ کرو</div>
+          <div class="cmd-card-eg">"تبسم میوٹ کرو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#25d366" onclick="showModal('whatsapp')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">💬</div>
+          <div class="cmd-card-name">واٹس ایپ</div>
+          <div class="cmd-card-eg">"تبسم [نام] واٹس ایپ"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#b197fc" onclick="showModal('readmsg')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">📩</div>
+          <div class="cmd-card-name">میسج پڑھو</div>
+          <div class="cmd-card-eg">"تبسم میسج پڑھو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#ff9a4d" onclick="showModal('sms')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">📱</div>
+          <div class="cmd-card-name">SMS کرو</div>
+          <div class="cmd-card-eg">"تبسم [نام] SMS کرو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#00e5c3" onclick="showModal('openapp')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">📲</div>
+          <div class="cmd-card-name">ایپ کھولو</div>
+          <div class="cmd-card-eg">"تبسم یوٹیوب کھولو"</div>
+        </div>
+        <div class="cmd-card" style="--accent-color:#ff4d6d" onclick="showModal('closeapp')">
+          <div class="cmd-card-badge"></div>
+          <div class="cmd-card-icon">❌</div>
+          <div class="cmd-card-name">ایپ بند کرو</div>
+          <div class="cmd-card-eg">"تبسم ایپ بند کرو"</div>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="section-hdr">
+        <div class="section-hdr-title">فوری کام</div>
+        <div class="section-hdr-line"></div>
+      </div>
+      <div class="quick-grid">
+        <div class="quick-btn" onclick="showModal('call')">
+          <div class="quick-btn-icon">📞</div>
+          <div class="quick-btn-label">فون</div>
+        </div>
+        <div class="quick-btn" onclick="showModal('whatsapp')">
+          <div class="quick-btn-icon">💬</div>
+          <div class="quick-btn-label">واٹس ایپ</div>
+        </div>
+        <div class="quick-btn" onclick="showModal('sms')">
+          <div class="quick-btn-icon">📱</div>
+          <div class="quick-btn-label">SMS</div>
+        </div>
+        <div class="quick-btn" onclick="showModal('openapp')">
+          <div class="quick-btn-icon">▶️</div>
+          <div class="quick-btn-label">یوٹیوب</div>
+        </div>
+        <div class="quick-btn" onclick="showModal('readmsg')">
+          <div class="quick-btn-icon">📩</div>
+          <div class="quick-btn-label">میسج</div>
+        </div>
+        <div class="quick-btn" onclick="showModal('mute')">
+          <div class="quick-btn-icon">🔇</div>
+          <div class="quick-btn-label">میوٹ</div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LOG -->
+      <div class="section-hdr">
+        <div class="section-hdr-title">سرگرمی لاگ</div>
+        <div class="section-hdr-line"></div>
+      </div>
+      <div class="log-section">
+        <div class="log-box" id="logBox">
+          <div class="log-empty">ابھی کوئی سرگرمی نہیں</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CONTACTS -->
+    <div class="tab-content" id="tab-contacts">
+      <div style="padding:16px 16px 8px">
+        <div class="section-hdr" style="padding:0 0 10px">
+          <div class="section-hdr-title">محفوظ رابطے</div>
+          <div class="section-hdr-line"></div>
+        </div>
+        <div id="contactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+        <button class="contact-add-btn" style="width:100%;justify-content:center;border-radius:12px;padding:12px" onclick="document.getElementById('addForm').classList.toggle('show')">
+          ➕ نیا رابطہ شامل کریں
+        </button>
+      </div>
+      <div class="add-form" id="addForm">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-family:var(--mono);letter-spacing:1px">نئی رابطہ معلومات</div>
+        <input type="text" id="cName" placeholder="نام (مثلاً: احمد، علی، فاطمہ)">
+        <input type="tel" id="cPhone" placeholder="موبائل نمبر (03XX-XXXXXXX)" dir="ltr">
+        <div class="form-btns">
+          <button class="btn-save" onclick="saveContact()">💾 محفوظ کریں</button>
+          <button class="btn-cancel" onclick="document.getElementById('addForm').classList.remove('show')">واپس</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HELP -->
+    <div class="tab-content" id="tab-help">
+      <div style="padding:16px 16px 8px">
+        <div class="section-hdr" style="padding:0 0 10px">
+          <div class="section-hdr-title">آواز کے احکام — مکمل فہرست</div>
+          <div class="section-hdr-line"></div>
+        </div>
+        <div class="help-card">
+          <div class="help-row">
+            <div class="help-badge">فون</div>
+            <div class="help-text">"تبسم <span>احمد</span> کو فون کرو" — منتخب رابطے کو کال کریں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">ریجیکٹ</div>
+            <div class="help-text">"تبسم کال <span>ریجیکٹ</span> کرو" — آنے والی کال رد کریں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">قبول</div>
+            <div class="help-text">"تبسم کال <span>قبول</span> کرو" — آنے والی کال لیں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">میوٹ</div>
+            <div class="help-text">"تبسم <span>میوٹ</span> کرو" — مائیکروفون بند کریں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">واٹس ایپ</div>
+            <div class="help-text">"تبسم <span>علی</span> کو واٹس ایپ کرو" — واٹس ایپ کھولیں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">میسج</div>
+            <div class="help-text">"تبسم <span>میسج</span> پڑھو" — آخری میسج پڑھیں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">SMS</div>
+            <div class="help-text">"تبسم <span>فاطمہ</span> کو SMS کرو" — پیغام بھیجیں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">کھولو</div>
+            <div class="help-text">"تبسم <span>یوٹیوب</span> کھولو" — کوئی بھی ایپ کھولیں</div>
+          </div>
+          <div class="help-row">
+            <div class="help-badge">بند کرو</div>
+            <div class="help-text">"تبسم <span>ایپ بند</span> کرو" — موجودہ ایپ بند کریں</div>
+          </div>
+        </div>
+      </div>
+      <div class="about-card">
+        <div class="about-logo">TABASSUM</div>
+        <div class="about-version">VERSION 1.0 • 2026</div>
+        <div class="about-desc">
+          آواز سے چلنے والا اسسٹنٹ<br>
+          ویک ورڈ: <span>تبسم</span><br>
+          پاکستانی نمبر فارمیٹ سپورٹ<br>
+          اردو آواز پہچان
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SETTINGS -->
+    <div class="tab-content" id="tab-settings">
+      <div class="settings-section">
+
+        <div class="section-hdr" style="padding:0 0 10px">
+          <div class="section-hdr-title">ویک ورڈ</div>
+          <div class="section-hdr-line"></div>
+        </div>
+        <div class="wake-word-input">
+          <div class="ww-label">جادوئی لفظ تبدیل کریں:</div>
+          <input type="text" class="ww-field" id="wakeWordInput" value="تبسم" oninput="updateWakeWord(this.value)">
+        </div>
+
+        <div class="section-hdr" style="padding:0 0 10px">
+          <div class="section-hdr-title">ترتیبات</div>
+          <div class="section-hdr-line"></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-icon">🔊</div>
+            <div class="settings-info">
+              <div class="settings-label">آواز جواب</div>
+              <div class="settings-desc">TTS سے جواب دیں</div>
+            </div>
+            <div class="toggle-switch on" id="tts-toggle" onclick="toggleSetting('tts-toggle')">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">📳</div>
+            <div class="settings-info">
+              <div class="settings-label">وائبریشن</div>
+              <div class="settings-desc">کمانڈ پر ہلائیں</div>
+            </div>
+            <div class="toggle-switch on" id="vib-toggle" onclick="toggleSetting('vib-toggle')">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">🌐</div>
+            <div class="settings-info">
+              <div class="settings-label">اردو زبان</div>
+              <div class="settings-desc">آواز پہچان: اردو/انگریزی</div>
+            </div>
+            <div class="toggle-switch on" id="lang-toggle" onclick="toggleSetting('lang-toggle')">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">📝</div>
+            <div class="settings-info">
+              <div class="settings-label">لاگ محفوظ کریں</div>
+              <div class="settings-desc">سرگرمی یاد رکھیں</div>
+            </div>
+            <div class="toggle-switch on" id="log-toggle" onclick="toggleSetting('log-toggle')">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-hdr" style="padding:0 0 10px">
+          <div class="section-hdr-title">ڈیٹا</div>
+          <div class="section-hdr-line"></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="clearLog()" style="cursor:pointer">
+            <div class="settings-icon">🗑️</div>
+            <div class="settings-info">
+              <div class="settings-label">لاگ صاف کریں</div>
+              <div class="settings-desc">تمام سرگرمی مٹائیں</div>
+            </div>
+            <div style="color:var(--muted);font-size:16px">›</div>
+          </div>
+          <div class="settings-row" onclick="clearContacts()" style="cursor:pointer">
+            <div class="settings-icon">👥</div>
+            <div class="settings-info">
+              <div class="settings-label">رابطے صاف کریں</div>
+              <div class="settings-desc">تمام محفوظ نمبر مٹائیں</div>
+            </div>
+            <div style="color:var(--muted);font-size:16px">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end scroll-content -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="switchTab('home')">
+      <div class="nav-item-icon">🏠</div>
+      <div class="nav-item-label">ہوم</div>
+    </div>
+    <div class="nav-item" id="nav-contacts" onclick="switchTab('contacts')">
+      <div class="nav-item-icon">👥</div>
+      <div class="nav-item-label">رابطے</div>
+    </div>
+    <div class="nav-item" id="nav-help" onclick="switchTab('help')">
+      <div class="nav-item-icon">❓</div>
+      <div class="nav-item-label">مدد</div>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+      <div class="nav-item-icon">⚙️</div>
+      <div class="nav-item-label">ترتیبات</div>
+    </div>
+  </div>
+
+</div><!-- end app -->
+
+<!-- MODAL SHEET -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal-sheet" id="modalSheet">
+    <div class="modal-handle"></div>
+    <div class="modal-icon" id="mIcon"></div>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="modal-actions" id="mActions"></div>
+  </div>
+</div>
+
+<script>
+// ===================== STATE =====================
+let wakeWord = 'تبسم';
+let contacts = JSON.parse(localStorage.getItem('tab_contacts') || '[]');
+let logItems = JSON.parse(localStorage.getItem('tab_log') || '[]');
+let recognition = null;
+let isListening = false;
+let isMuted = false;
+let settings = JSON.parse(localStorage.getItem('tab_settings') || '{"tts":true,"vib":true,"lang":true,"log":true}');
+
+if(!contacts.length) {
+  contacts = [
+    {name:'احمد',phone:'03001234567'},
+    {name:'علی',phone:'03111234567'},
+    {name:'فاطمہ',phone:'03211234567'},
+    {name:'سارہ',phone:'03321234567'},
+    {name:'عمر',phone:'03451234567'}
+  ];
+  saveContacts();
+}
+
+// ===================== INIT =====================
+window.onload = function() {
+  setTimeout(()=>{
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(()=>{
+      document.getElementById('splash').style.display='none';
+      document.getElementById('app').classList.add('visible');
+    },800);
+  },2000);
+  renderContacts();
+  renderLog();
+  loadSettings();
+};
+
+// ===================== TABS =====================
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+}
+
+// ===================== MIC =====================
+function toggleMic() {
+  if(isListening) stopMic();
+  else startMic();
+}
+
+function startMic() {
+  isListening = true;
+  const btn = document.getElementById('micBtn');
+  btn.classList.add('listening');
+  document.getElementById('micEmoji').textContent = '🔴';
+  document.getElementById('micLabel').textContent = 'سن رہا...';
+  document.getElementById('topDot').className = 'status-dot hearing';
+  document.getElementById('topLabel').textContent = 'سن رہا';
+  setTranscript('آواز سن رہا ہوں — "'+wakeWord+'" کہیں...', 'active');
+  addLog('مائیکروفون چالو', 'ok');
+  vibrate();
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) {
+    addLog('آواز پہچان دستیاب نہیں — ڈیمو موڈ', 'err');
+    setTranscript('آواز پہچان اس براؤزر میں نہیں — نیچے کارڈ دبائیں', '');
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = settings.lang ? 'ur-PK' : 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const heard = (final||interim).trim();
+    setTranscript('سنا: "'+heard+'"', 'active');
+    if(final) processVoice(final.toLowerCase());
+  };
+
+  recognition.onerror = (e) => {
+    addLog('خرابی: '+e.error, 'err');
+    stopMic();
+  };
+
+  recognition.onend = () => { if(isListening) recognition.start(); };
+  recognition.start();
+}
+
+function stopMic() {
+  isListening = false;
+  if(recognition) { recognition.onend=null; recognition.stop(); }
+  const btn = document.getElementById('micBtn');
+  btn.classList.remove('listening','ready');
+  document.getElementById('micEmoji').textContent = '🎙️';
+  document.getElementById('micLabel').textContent = 'START';
+  document.getElementById('topDot').className = 'status-dot';
+  document.getElementById('topLabel').textContent = 'بند';
+  setTranscript('مائیکروفون دبائیں اور "'+wakeWord+'" کہیں...', '');
+  addLog('مائیکروفون بند', '');
+}
+
+function setTranscript(text, cls) {
+  const el = document.getElementById('transcriptText');
+  el.textContent = text;
+  el.className = 'transcript-text '+(cls||'');
+}
+
+// ===================== VOICE PROCESSING =====================
+function processVoice(text) {
+  const ww = wakeWord.toLowerCase();
+  const wwEn = 'tabassum';
+  if(!text.includes(ww) && !text.includes(wwEn)) return;
+
+  addLog('کمانڈ: "'+text.trim()+'"', 'act');
+  setTranscript('کمانڈ پکڑی: "'+text.trim()+'"', 'cmd');
+  vibrate();
+  speak('جی');
+
+  const name = findContactInText(text);
+
+  if((text.includes('فون') || text.includes('call') || text.includes('کال')) && !text.includes('ریجیکٹ') && !text.includes('reject') && !text.includes('بند')) {
+    showModal('call', name);
+  } else if(text.includes('ریجیکٹ') || text.includes('reject')) {
+    showModal('reject', name);
+  } else if(text.includes('قبول') || text.includes('accept') || text.includes('اٹھاؤ')) {
+    doAction('accept', name);
+  } else if(text.includes('میوٹ') || text.includes('mute')) {
+    doAction('mute', name);
+  } else if(text.includes('واٹس') || text.includes('whatsapp') || text.includes('وہاٹس')) {
+    showModal('whatsapp', name);
+  } else if(text.includes('میسج') || text.includes('message') || text.includes('پڑھ')) {
+    showModal('readmsg', name);
+  } else if(text.includes('sms') || text.includes('ایس ایم ایس') || text.includes('پیغام')) {
+    showModal('sms', name);
+  } else if(text.includes('بند') || text.includes('close') || text.includes('ختم')) {
+    doAction('closeapp', '');
+  } else if(text.includes('کھول') || text.includes('open') || text.includes('چالو')) {
+    const app = detectApp(text);
+    doAction('openapp', app);
+  } else {
+    addLog('کمانڈ سمجھ نہیں آئی', 'err');
+    speak('معاف کریں، سمجھ نہیں آئی');
+  }
+}
+
+function findContactInText(text) {
+  for(let c of contacts) {
+    if(text.includes(c.name.toLowerCase()) || text.includes(c.name)) return c.name;
+  }
+  return contacts.length ? contacts[0].name : 'احمد';
+}
+
+function detectApp(text) {
+  if(text.includes('یوٹیوب') || text.includes('youtube')) return 'YouTube';
+  if(text.includes('واٹس') || text.includes('whatsapp')) return 'WhatsApp';
+  if(text.includes('کیمرہ') || text.includes('camera')) return 'Camera';
+  if(text.includes('میپ') || text.includes('map') || text.includes('نقشہ')) return 'Maps';
+  if(text.includes('میوزک') || text.includes('music') || text.includes('گانا')) return 'Music';
+  if(text.includes('سیٹنگ') || text.includes('setting')) return 'Settings';
+  if(text.includes('براؤزر') || text.includes('browser')) return 'Browser';
+  return 'ایپ';
+}
+
+// ===================== MODAL =====================
+const modalDefs = {
+  call: (name) => ({
+    icon:'📞', title: name+' کو فون کریں',
+    sub: 'کال شروع کریں',
+    actions: [
+      {label:'📞 کال کریں', cls:'mb-green', fn:`doAction('call','${name}')`},
+      {label:'❌ منسوخ', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  reject: (name) => ({
+    icon:'📵', title:'کال ریجیکٹ کریں',
+    sub: 'آنے والی کال رد کریں',
+    actions: [
+      {label:'📵 ریجیکٹ', cls:'mb-red', fn:`doAction('reject','${name}')`},
+      {label:'📞 قبول کریں', cls:'mb-green', fn:`doAction('accept','${name}')`},
+      {label:'🔇 میوٹ کریں', cls:'mb-gold', fn:`doAction('mute','${name}')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  mute: (name) => ({
+    icon:'🔇', title:'میوٹ کریں',
+    sub: 'مائیکروفون بند کریں',
+    actions: [
+      {label:'🔇 میوٹ ON', cls:'mb-gold', fn:`doAction('mute','')`},
+      {label:'🔊 میوٹ OFF', cls:'mb-green', fn:`doAction('unmute','')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  whatsapp: (name) => ({
+    icon:'💬', title: name+' کو واٹس ایپ',
+    sub: 'واٹس ایپ میسج بھیجیں',
+    actions: [
+      {label:'💬 واٹس ایپ کھولیں', cls:'mb-green', fn:`doAction('whatsapp','${name}')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  readmsg: (name) => ({
+    icon:'📩', title:'آخری میسج',
+    sub: 'میسج پڑھیں',
+    actions: [
+      {label:'📩 میسج پڑھیں', cls:'mb-blue', fn:`doAction('read','')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  sms: (name) => ({
+    icon:'📱', title: name+' کو SMS',
+    sub: 'ایس ایم ایس بھیجیں',
+    actions: [
+      {label:'📱 SMS بھیجیں', cls:'mb-green', fn:`doAction('sms','${name}')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  openapp: (name) => ({
+    icon:'📲', title:'ایپ کھولیں',
+    sub: 'کون سی ایپ کھولنی ہے؟',
+    actions: [
+      {label:'▶️ YouTube', cls:'mb-red', fn:`doAction('openapp','YouTube')`},
+      {label:'💬 WhatsApp', cls:'mb-green', fn:`doAction('openapp','WhatsApp')`},
+      {label:'🗺️ Maps', cls:'mb-blue', fn:`doAction('openapp','Maps')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+  closeapp: (name) => ({
+    icon:'❌', title:'ایپ بند کریں',
+    sub: 'موجودہ ایپ بند کریں',
+    actions: [
+      {label:'❌ بند کریں', cls:'mb-red', fn:`doAction('closeapp','')`},
+      {label:'واپس', cls:'mb-ghost', fn:'closeModal()'}
+    ]
+  }),
+};
+
+function showModal(type, name) {
+  const defName = name || (contacts.length ? contacts[0].name : 'احمد');
+  const def = modalDefs[type] ? modalDefs[type](defName) : null;
+  if(!def) return;
+  document.getElementById('mIcon').textContent = def.icon;
+  document.getElementById('mTitle').textContent = def.title;
+  document.getElementById('mSub').textContent = def.sub;
+  document.getElementById('mActions').innerHTML = def.actions.map(a=>
+    `<button class="modal-btn ${a.cls}" onclick="${a.fn}">${a.label}</button>`
+  ).join('');
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal(e) {
+  if(!e || e.target===document.getElementById('modalBg')) {
+    document.getElementById('modalBg').classList.remove('show');
+  }
+}
+
+// ===================== ACTIONS =====================
+function doAction(action, target) {
+  document.getElementById('modalBg').classList.remove('show');
+  vibrate();
+  const contact = contacts.find(c=>c.name===target);
+  const phone = contact ? contact.phone : '';
+  const phone92 = phone ? phone.replace(/^0/, '+92') : '';
+
+  const msgs = {
+    call: `📞 ${target} کو کال کی — ${phone}`,
+    accept: `📞 کال قبول کی`,
+    reject: `📵 کال ریجیکٹ کی`,
+    mute: `🔇 میوٹ ON`,
+    unmute: `🔊 میوٹ OFF`,
+    whatsapp: `💬 ${target} واٹس ایپ کھولا`,
+    read: `📩 میسج پڑھا گیا`,
+    sms: `📱 ${target} کو SMS — ${phone}`,
+    openapp: `📲 ${target} کھولا`,
+    closeapp: `❌ ایپ بند کی`,
+  };
+  addLog(msgs[action]||action, 'ok');
+  speak(msgs[action]||action);
+
+  if(action==='call' && phone) {
+    try { window.location.href = 'tel:'+phone; } catch(e){}
+  } else if(action==='whatsapp' && phone92) {
+    try { window.open('https://wa.me/'+phone92.replace(/\s|-/g,''), '_blank'); } catch(e){}
+  } else if(action==='sms' && phone) {
+    try { window.location.href = 'sms:'+phone; } catch(e){}
+  } else if(action==='openapp') {
+    const appUrls = {
+      YouTube: 'https://youtube.com',
+      WhatsApp: 'https://wa.me',
+      Maps: 'https://maps.google.com',
+      Browser: 'https://google.com',
+    };
+    if(appUrls[target]) try { window.open(appUrls[target],'_blank'); } catch(e){}
+  }
+}
+
+// ===================== CONTACTS =====================
+function renderContacts() {
+  const list = document.getElementById('contactsList');
+  if(!contacts.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">کوئی رابطہ نہیں</div>';
+    return;
+  }
+  list.innerHTML = contacts.map((c,i)=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--cyan);flex-shrink:0">${c.name.charAt(0)}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${c.name}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${c.phone}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="quickCall(${i})" style="background:rgba(0,229,195,0.08);border:1px solid rgba(0,229,195,0.2);border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer">📞</button>
+        <button onclick="quickWA(${i})" style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer">💬</button>
+        <button onclick="deleteContact(${i})" style="background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function quickCall(i) {
+  const c = contacts[i];
+  addLog('📞 '+c.name+' — '+c.phone, 'ok');
+  try { window.location.href='tel:'+c.phone; } catch(e){}
+}
+
+function quickWA(i) {
+  const c = contacts[i];
+  const p = c.phone.replace(/^0/,'+92').replace(/\s|-/g,'');
+  addLog('💬 '+c.name+' واٹس ایپ', 'ok');
+  try { window.open('https://wa.me/'+p,'_blank'); } catch(e){}
+}
+
+function deleteContact(i) {
+  if(confirm(contacts[i].name+' کو مٹائیں؟')) {
+    contacts.splice(i,1);
+    saveContacts();
+    renderContacts();
+    addLog('رابطہ مٹایا', '');
+  }
+}
+
+function saveContact() {
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  if(!name || !phone) { alert('نام اور نمبر ضروری ہیں'); return; }
+  contacts.push({name, phone});
+  saveContacts();
+  renderContacts();
+  document.getElementById('cName').value='';
+  document.getElementById('cPhone').value='';
+  document.getElementById('addForm').classList.remove('show');
+  addLog(name+' شامل کیا', 'ok');
+}
+
+function saveContacts() { localStorage.setItem('tab_contacts', JSON.stringify(contacts)); }
+
+function clearContacts() {
+  if(confirm('تمام رابطے مٹائیں؟')) {
+    contacts = [];
+    saveContacts();
+    renderContacts();
+    addLog('تمام رابطے مٹائے', 'err');
+  }
+}
+
+// ===================== LOG =====================
+function addLog(msg, type) {
+  if(!settings.log) return;
+  const now = new Date();
+  const t = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  logItems.unshift({t, msg, type});
+  if(logItems.length > 50) logItems = logItems.slice(0,50);
+  localStorage.setItem('tab_log', JSON.stringify(logItems));
+  renderLog();
+}
+
+function renderLog() {
+  const box = document.getElementById('logBox');
+  if(!logItems.length) {
+    box.innerHTML = '<div class="log-empty">ابھی کوئی سرگرمی نہیں</div>';
+    return;
+  }
+  box.innerHTML = logItems.map(e=>
+    `<div class="log-entry"><span class="log-time">${e.t}</span><span class="log-msg ${e.type||''}">${e.msg}</span></div>`
+  ).join('');
+}
+
+function clearLog() {
+  logItems = [];
+  localStorage.setItem('tab_log','[]');
+  renderLog();
+}
+
+// ===================== SETTINGS =====================
+function loadSettings() {
+  ['tts','vib','lang','log'].forEach(k=>{
+    const el = document.getElementById(k+'-toggle');
+    if(el) el.className = 'toggle-switch '+(settings[k]?'on':'');
+  });
+}
+
+function toggleSetting(id) {
+  const key = id.replace('-toggle','');
+  settings[key] = !settings[key];
+  document.getElementById(id).className = 'toggle-switch '+(settings[key]?'on':'');
+  localStorage.setItem('tab_settings', JSON.stringify(settings));
+}
+
+function updateWakeWord(val) {
+  if(val.trim()) {
+    wakeWord = val.trim();
+    document.getElementById('wakeWordDisplay').textContent = wakeWord;
+    localStorage.setItem('tab_wakeword', wakeWord);
+  }
+}
+
+// ===================== UTILS =====================
+function speak(text) {
+  if(!settings.tts) return;
+  if('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ur-PK';
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+}
+
+function vibrate() {
+  if(settings.vib && navigator.vibrate) navigator.vibrate(50);
+}
+
+// Load saved wake word
+const savedWW = localStorage.getItem('tab_wakeword');
+if(savedWW) {
+  wakeWord = savedWW;
+  document.getElementById('wakeWordDisplay').textContent = wakeWord;
+}
+</script>
+</body>
+</html>
